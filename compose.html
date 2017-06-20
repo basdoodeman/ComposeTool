@@ -30,7 +30,7 @@
 		span.cell {
 			padding: 0px !important;
 			width: 90%;
-			display: inline-block;
+/*			display: inline-block;*/
 		}		
 	</style>
 
@@ -103,24 +103,34 @@ function makeDraggable(branch) {
 		branch.draggable   = typeof(branch.draggable) != "undefined" ? branch.draggable : true;
 		branch.droppable   = typeof(branch.droppable) != "undefined" ? branch.droppable : true;
 		branch.node		   = typeof(branch.node) != "undefined" ? branch.node: $("#"+branch.id+">td>span");
+		branch.accept      = typeof(branch.accept) != "undefined" ? branch.accept: {};
 	} else {
 		branch = {};
 	}
 
-	// Highlight selected row
-	$("#example-advanced tbody").on("mousedown", "tr", function() {
+	// Highlight selected row 
+/*	$("#example-advanced tbody").on("mousedown", "tr", function() {
 		$(".selected").not(this).removeClass("selected");
 		$(this).toggleClass("selected");
 	});
-
+*/
 	// seclect cell content when starting edit
-/*	$("#example-advanced tbody").on("focus", "span.cell", function() {
-			document.execCommand('selectAll',false,null);
+	$("#example-advanced tbody").on("focus", "span.cell", function() {
+		// enable text selection
+		$(document).unbind('selectstart');
+		// select cell
+		document.execCommand('selectAll',false,null);
 	});
 
 	// finish editing when moving outside the cell
 	$("#example-advanced tbody").on("blur", "span.cell", function() {
-			$(this).removeAttr("contentEditable")
+		// disable text selection
+		$(document).bind('selectstart', function(e) {
+			e.preventDefault();
+			return false;
+		});
+
+		$(this).removeAttr("contentEditable")
 	});
 
 	// edit table cells on click
@@ -141,7 +151,7 @@ function makeDraggable(branch) {
 			});
 		}
 	});
-*/
+
 	// Make cell draggable
 	if (branch.draggable==true) {
 		$(branch.node).draggable({
@@ -150,7 +160,8 @@ function makeDraggable(branch) {
 			refreshPositions: true, // Performance?
 			revert: "invalid",
 			revertDuration: 300,
-			scroll: true
+			scroll: true,
+			width: "10em"
 		});
 	}
 
@@ -159,11 +170,26 @@ function makeDraggable(branch) {
 		$("#example-advanced .file, #example-advanced .folder").each(function() {
 			if ($(this).parent().parent().attr("id") == branch.id) {
 				
-				$(this).parents("#example-advanced tr").droppable({
-					accept: ".file, .folder",
+				// accept matrix:
+				// .content will accept .tag
+				// .name will accept .file .folder
+				
+				/*
+				for all tags in accept (name,content)
+					accept tags
+					
+				
+				*/
+				
+				$(this).parents("#example-advanced tr").children("td").droppable({
+					accept: branch.accept,
 					drop: function(e, ui) {
-						var droppedEl = ui.draggable.parents("tr");
-						$("#example-advanced").treetable("move", droppedEl.data("ttId"), $(this).data("ttId")).treetable("expandNode", $(this).data("ttId"));
+						var droppedEl = ui.draggable.parents("td");
+console.log(ui.draggable[0]);console.log("to");console.log($(this)[0]);
+
+
+					//$("#example-advanced").treetable("move", droppedEl.data("ttId"), $(this).data("ttId")).treetable("expandNode", $(this).data("ttId"));
+						
 					},
 					hoverClass: "accept",
 					over: function(e, ui) {
@@ -374,7 +400,10 @@ $( document ).ready(function() {
 											},
 											kind: "Tag",
 											size: "",
-											content: typeof(data[part.value])!="undefined" ? data[part.value] : "&lt;"+part.value+"&gt;"
+											content: typeof(data[part.value])!="undefined" ? data[part.value] : "&lt;"+part.value+"&gt;",
+											accept: {
+												content: {".tag"}
+											}
 										});
 																												
 										if (!part.module) {
@@ -410,7 +439,7 @@ $( document ).ready(function() {
 									});
 
 									for (var i=0;i<e.length;i++) {
-												// leaf for Error
+										// leaf for Error
 										addBranch({
 											parentId: branches['Errors'].id,
 											table: "#example-advanced",
@@ -443,7 +472,7 @@ doc.render();
 									return;
 								}
 
-								// branch for Documents
+								// branch for Documents folder
 								var parentId=addBranch({
 									table: "#example-advanced",
 									name: {
@@ -453,10 +482,10 @@ doc.render();
 									size: "--",
 									content: "",
 									draggable: false,
-									droppable: true
+									droppable: true,
 								});
 
-								// node for Deliverable
+								// node for Document
 								var id=addBranch({
 									parentId: parentId,
 									table: "#example-advanced",
