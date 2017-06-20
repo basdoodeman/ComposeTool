@@ -5,6 +5,9 @@
 	<title>SoTru Compose</title>
 </head>
 <body>
+
+	<!-- fork me on github -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.0/gh-fork-ribbon.min.css" />
 	<!-- screen.css -->
 	<link rel="stylesheet" href="data:text/css;base64,Ym9keXtiYWNrZ3JvdW5kOiNkZGQ7Y29sb3I6IzAwMDtmb250LWZhbWlseTpIZWx2ZXRpY2EsQXJpYWwsc2Fucy1zZXJpZjtsaW5lLWhlaWdodDoxLjU7bWFyZ2luOjA7cGFkZGluZzowfSNtYWlue2JhY2tncm91bmQ6I2ZmZjtib3JkZXItbGVmdDoyMHB4IHNvbGlkICNlZWU7Ym9yZGVyLXJpZ2h0OjIwcHggc29saWQgI2VlZTttYXJnaW46MCBhdXRvO21heC13aWR0aDo4MDBweDtwYWRkaW5nOjIwcHh9cHJlLmxpc3Rpbmd7YmFja2dyb3VuZDojZWVlO2JvcmRlcjoxcHggc29saWQgI2NjYzttYXJnaW46LjZlbSAwIC4zZW0gMDtwYWRkaW5nOi4xZW0gLjNlbX1wcmUubGlzdGluZyBie2NvbG9yOnJlZH0=" media="screen" />
 	<!-- jquery.treetable.css -->
@@ -31,7 +34,11 @@
 			padding: 0px !important;
 			width: 90%;
 /*			display: inline-block;*/
-		}		
+		}	
+        /* Fork me on GitHub */
+        .github-fork-ribbon.right-bottom:before {
+            background-color: #000;
+        }			
 	</style>
 
 	<!-- jquery.js -->
@@ -402,7 +409,7 @@ $( document ).ready(function() {
 											size: "",
 											content: typeof(data[part.value])!="undefined" ? data[part.value] : "&lt;"+part.value+"&gt;",
 											accept: {
-												content: {".tag"}
+												content: ".tag"
 											}
 										});
 																												
@@ -1004,5 +1011,9 @@ doc.render();
 -->
 		</tbody>
 	</table>	
+
+	<!-- Fork me on GitHub -->
+	<a class="github-fork-ribbon right-bottom fixed" href="https://github.com/basdoodeman/SoTru/" target="_blank" title="Fork me on GitHub">Fork me on GitHub</a>
+
 </body>
 </html>
