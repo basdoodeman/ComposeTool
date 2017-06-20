@@ -85,6 +85,7 @@ function dataURItoArrayBuffer(dataURI) {
 }
 
 // function to dowload an URI document by clicking a link //
+// example: downloadURI(event.target.result, "export.doc");
 function downloadURI(uri, name) {
 	var link = document.createElement("a");
 	link.download = name;
@@ -94,16 +95,14 @@ function downloadURI(uri, name) {
 	document.body.removeChild(link);
 	delete link;
 }
-// example: downloadURI(event.target.result, "export.doc");
-
 
 // Drag & Drop Example Code
 function makeDraggable(branch) {
-	branch 				= typeof(branch) != "undefined" ? branch : {};
-	branch.id			= typeof(branch.id) != "undefined" ? branch.id : Date.now();
-	branch.draggable	= typeof(branch.draggable) != "undefined" ? branch.draggable : true;
-	branch.droppable	= typeof(branch.droppable) != "undefined" ? branch.droppable : true;
-	branch.node			= typeof(branch.parentId) != "undefined" ? $(branch.table).treetable("node", branch.id) : null;
+	branch             = typeof(branch) != "undefined" ? branch : {};
+	branch.id          = typeof(branch.id) != "undefined" ? branch.id : Date.now();
+	branch.draggable   = typeof(branch.draggable) != "undefined" ? branch.draggable : true;
+	branch.droppable   = typeof(branch.droppable) != "undefined" ? branch.droppable : true;
+	branch.node        = typeof(branch.parentId) != "undefined" ? $(branch.table).treetable("node", branch.id) : null;
 
 	// Highlight selected row
 	$("#example-advanced tbody").on("mousedown", "tr", function() {
@@ -204,10 +203,10 @@ function addBranch(branch) {
 				"<td class='kind'>"+branch.kind+"</td>"+
 				"<td class='size'>"+branch.size+"</td>"+
 				"<td class='export'>"+
-					'<input '+branch.docx+' class="export todocx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="docx" title="Export to Word" />'+
-					'<input '+branch.pptx+' class="export topptx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="pptx" title="Export to PowerPoint" />'+
-					'<input '+branch.xlsx+' class="export toxlsx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="xlsx" title="Export to Excel" />'+
-					'<input '+branch.vsdx+' class="export tovsdx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="vsdx" title="Export to Visio" />'+
+					'<input '+branch.docx+' class="export todocx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="docx" title="Export to Word" />'+
+					'<input '+branch.pptx+' class="export topptx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="pptx" title="Export to PowerPoint" />'+
+					'<input '+branch.xlsx+' class="export toxlsx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="xlsx" title="Export to Excel" />'+
+					'<input '+branch.vsdx+' class="export tovsdx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="vsdx" title="Export to Visio" />'+
 				"</td>"+			
 			"</tr>"
 		);
@@ -236,182 +235,194 @@ function isDefined(expr) {
 } 
 
 function exportToWord() {
-	var tags={};
+    var tags={};
 
-	// collect all Tags		
-	$("#example-advanced tr").each(function () {
-		if (typeof($(this).find(".name>>span.cell").html()) != "undefined") {
-			tags[$(this).find(".name>>span.cell").text()] = $(this).find(".content>>span.cell").text();
-		}
-	});
-console.log(tags);
+    // collect all Tags		
+    $("#example-advanced tr").each(function () {
+        if (isDefined($(this).find(".name>>span.cell").html()) && isDefined ($(this).find(".content>>span.cell").text()) && $(this).find(".content>>span.cell").text() != "") {
+            tags[$(this).find(".name>>span.cell").text()] = $(this).find(".content>>span.cell").text();
+        }
+    });
 
-	$("#example-advanced tr").each (function () {
-		var dataURI="";
-		
-		$(this).find("input[name='docx'][checked='true']")
+    $("#example-advanced tr").has("input:checked[name='docx']").each (function () {
+        var filename = $(this).find(".name>>span.cell>a").attr("download");
+        var dataURI = $(this).find(".name>>span.cell>a").attr("href");
+        var zip = new JSZip(dataURItoArrayBuffer(dataURI));
+        var doc = new Docxtemplater().loadZip(zip);
 
-console.log($(this).parent().html());
-
-			//								doc.setData( {"Project Name":"Valmet Leap Forward",
-			//									"Subtitle":"Yes, a Subtitle"
-			//								});
-
-			doc.render();
-	
-			// post processing:
-			doc.zip.file('word/document.xml', doc.zip.file('word/document.xml').asText().replace(/NoteWide/g,""));
-			/*
-						<w:p>
-							<w:pPr>
-								<w:pStyle w:val="NoteWide" />
-							</w:pPr>
-							<w:r>
-								<w:t xml:space="preserve">The model company is defined early in the project based on enterprise wide decisions that are required to reap the benefits of the software. </w:t>
-							</w:r>
-						</w:p>
-
-			*/
-
-			// download:
-			//	var out=doc.getZip().generate({type:"blob"});
-			//	saveAs(out,"output.docx");
-	});
+        doc.setOptions ({
+            delimiters:{start:'&lt;',end:'&gt;'},
+            nullGetter:function (part) {
+                if (!part.module) {
+                        return "<"+part.value+">";
+                }
+                if (part.module === "rawxml") {
+                        return "";
+                }
+                return "";
+            }
+        });
+        doc.setData(tags);
+        doc.render();
+/*	
+                    // post processing:
+                    doc.zip.file('word/document.xml', doc.zip.file('word/document.xml').asText().replace(/NoteWide/g,""));
+*/
+        // download:
+        var out=doc.getZip().generate({type:"blob"});
+        saveAs(out,filename);
+    });
 }
 
 $( document ).ready(function() {
-	$("#example-advanced").treetable({ expandable: true });
+    $("#example-advanced").treetable({ expandable: true });
 
-	makeDraggable();
+    makeDraggable();
 
-	$('html,#example-advanced').on({
-		'dragover dragenter': function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-		},
-		'drop': function(e) {
-			var dataTransfer =  e.originalEvent.dataTransfer;
-			if( dataTransfer && dataTransfer.files.length) {
-				e.preventDefault();
-				e.stopPropagation();
-				$.each( dataTransfer.files, function(i, file) { 
+    $('html,#example-advanced').on({
+        'dragover dragenter': function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        },
+        'drop': function(e) {
+            var dataTransfer =  e.originalEvent.dataTransfer;
+            if( dataTransfer && dataTransfer.files.length) {
+                e.preventDefault();
+                e.stopPropagation();
+                $.each( dataTransfer.files, function(i, file) { 
 
-				switch(file.type) {
-					// directory //
-					case "":
-						addBranch({
-							table:		"#example-advanced",
-							name:		{
-								name:	file.name
-							},
-							kind:		"Folder",
-							size:		"--",
-							content: 	""
-						});
-						break;
-					default:
-						var reader = new FileReader();
-						reader.onload = $.proxy(function(file, $fileList, event) {
-				
-							if (dataURIType(event.target.result).match('image.*')) {					
-								var img = file.type.match('image.*') ?  "style=\"background-size: 16px;background-image:url('"+event.target.result+"');\"" : "";						
-						
-								addBranch({
-									table: "#example-advanced",
-									name: {
-										style: img,
-										name: file.name+" <a download='"+file.name+"' href='"+event.target.result+"'>"+ "(link)" + "</a>"
-									},
-									kind: "File",
-									size: "",
-									content: ""
-								});
+                switch(file.type) {
+                    // directory //
+                    case "":
+                        addBranch({
+                            table: "#example-advanced",
+                            name: {
+                                name: file.name
+                            },
+                            kind: "Folder",
+                            size: "--",
+                            content: ""
+                        });
+                        break;
+                    default:
+                        var reader = new FileReader();
+                        reader.onload = $.proxy(function(file, $fileList, event) {
+    
+                            if (dataURIType(event.target.result).match('image.*')) {					
+                                var img = file.type.match('image.*') ?  "style=\"background-size: 16px;background-image:url('"+event.target.result+"');\"" : "";						
+                
+                                addBranch({
+                                    table: "#example-advanced",
+                                    name: {
+                                        style: img,
+                                        name: file.name+" <a download='"+file.name+"' href='"+event.target.result+"'>"+ "(link)" + "</a>"
+                                    },
+                                    kind: "File",
+                                    size: "",
+                                    content: ""
+                                });
 
-							} else if (dataURIType(event.target.result).match('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
-								// branch for Tags
-								addBranch({
-									table: "#example-advanced",
-									name: {
-										name: "Tags"
-									},
-									kind: "Folder",
-									size: "--",
-									content: "",
-									draggable: false,
-									droppable: true
-								});
+                            } else if (dataURIType(event.target.result).match('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+                                // branch for Tags
+                                addBranch({
+                                    table: "#example-advanced",
+                                    name: {
+                                        name: "Tags"
+                                    },
+                                    kind: "Folder",
+                                    size: "--",
+                                    content: "",
+                                    draggable: false,
+                                    droppable: true
+                                });
 
-								// nodes for Tags
-								var zip = new JSZip(dataURItoArrayBuffer(event.target.result));
-								var doc = new Docxtemplater().loadZip(zip);
-								var data = {
-									"Project Name":"Valmet Leap Forward",
-									"Subtitle":"Yes, a Subtitle"
-								};
-								doc.setOptions ({
-									delimiters:{start:'&lt;',end:'&gt;'},
-									nullGetter:function (part) {
-										addBranch({
-											parentId: branches['Tags'].id,
-											table: "#example-advanced",
-											name: {
-												name: part.value
-											},
-											kind: "Tag",
-											size: "",
-											content: typeof(data[part.value])!="undefined" ? data[part.value] : ""
-										});
-																			
-										if (!part.module) {
-											return "<"+part.value+">";
-										}
-										if (part.module === "rawxml") {
-											return "";
-										}
-										return "";
-									}
-								});
-								doc.render();
+                                // nodes for Tags
+                                var zip = new JSZip(dataURItoArrayBuffer(event.target.result));
+                                var doc = new Docxtemplater().loadZip(zip);
+                                var data = {
+//"Project Name":"Valmet Leap Forward",
+//"Subtitle":"Yes, a Subtitle"
+                                };
 
-								// branch for Deliverarbles
-								var parentId=addBranch({
-									table: "#example-advanced",
-									name: {
-										name: "Deliverables"
-									},
-									kind: "Folder",
-									size: "--",
-									content: "",
-									draggable: false,
-									droppable: true
-								});
+                                doc.setOptions ({
+                                    delimiters:{start:'&lt;',end:'&gt;'},
+                                    nullGetter:function (part) {
+                                        addBranch({
+                                            parentId: branches['Tags'].id,
+                                            table: "#example-advanced",
+                                            name: {
+                                                name: part.value
+                                            },
+                                            kind: "Tag",
+                                            size: "",
+                                            content: typeof(data[part.value])!="undefined" ? data[part.value] : "&lt;"+part.value+"&gt;"
+                                        });
+                                                                                                                
+                                        if (!part.module) {
+                                            return "<"+part.value+">";
+                                        }
+                                        if (part.module === "rawxml") {
+                                            return "";
+                                        }
+                                        return "";
+                                    }
+                                });
+                                
+                                try {
+                                    // render the document (replace all occurences of {first_name} by John, {last_name} by Doe, ...)
+                                    doc.render()
+                                }
+                                catch (error) {            
+                                    var e = {
+                                        message: error.message,
+                                        name: error.name,
+                                    //    stack: error.stack,
+                                        properties: error.properties,
+                                    }
+                                    console.log(e.properties.errors);//JSON.stringify(e,null,4));
+            
+                                    // Handle error
+                                    throw new Error("Error");
+                                    return;
+                                }
 
-								// node for Deliverable
-								var id=addBranch({
-									parentId: parentId,
-									table: "#example-advanced",
-									name: {
-										name: file.name+" <a download='"+file.name+"' href='"+event.target.result+"'>"+ "" + "</a>"
-									},
-									kind: "File",
-									size: "",
-									content: "",
-									docx: "checked='true'",
-									source: event.target.result
-								});
-							
-								$("#example-advanced").treetable("expandNode", parentId);
+                                // branch for Deliverarbles
+                                var parentId=addBranch({
+                                    table: "#example-advanced",
+                                    name: {
+                                        name: "Deliverables"
+                                    },
+                                    kind: "Folder",
+                                    size: "--",
+                                    content: "",
+                                    draggable: false,
+                                    droppable: true
+                                });
 
-exportToWord();
-							}
-						}, this, file, $("#fileList"));
-						reader.readAsDataURL(file);
-					}
-				});
-			}
-		}
-	});
-
+                                // node for Deliverable
+                                var id=addBranch({
+                                    parentId: parentId,
+                                    table: "#example-advanced",
+                                    name: {
+                                        name: file.name+" <a download='"+file.name+"' href='"+event.target.result+"'>"+ "" + "</a>"
+                                    },
+                                    kind: "File",
+                                    size: "",
+                                    content: "",
+                                    docx: "checked='true'",
+                                    source: event.target.result
+                                });
+                        
+                                $("#example-advanced").treetable("expandNode", parentId);
+//exportToWord();
+                            }
+                        }, this, file, $("#fileList"));
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        }
+    });
 });
 	</script>
 
@@ -435,10 +446,10 @@ exportToWord();
 				<img style="width:16px;margin:0px;padding:0px;" alt="V" title="Export Visio files" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAABJOSURBVHhe7Z1Nj1xHFYb9s/gB/AEklkasvTZGYhPJrBIJhYVhA5JXUfjYYDSYjWOC2cUohgXDwoOUhIUHLHnDmIVXzVSTDu3mdledqvfUrY+npVEUT93Tdd9zznPPrXvqzo2vffP+hh80IAbmjIEbOH5Ox+N3/B5iAABQAVEBThwDAGBi51MFUAUAAABABTBxDACAiZ1PBUAFAAAAABXAxDEAACZ2PhUAFQAAAABUABPHAACY2PlUAFQAAAAAUAFMHAMAYGLnUwFQAQAAAEAFMHEMAICJnU8FQAUAAAAAFcDEMQAAJnY+FQAVAAAAAFQAE8cAAJjY+VQAVAAAAABQAUwcAwBgYudTAVABAAAAQAUwcQwAgImdTwVABQAAAAAVwMQxAAAmdj4VABUAAAAAVAATxwAAmNj5VABUAAAAAFABTBwDAGBi51MBUAEAAABABTBxDACAiZ1PBUAFAAAAABXAxDEAACZ2fmoFcOudh5u7955sfvLzP22enV9uXry82oRP+P9UG4xrs9oAAADgqyQ+lujbbF/4AIA2k9oCWwAwIQBu3n6weEU/lugAoP9EPwYFADAwAEKi33n30bZU//jpF5vnn72y5vjJ8VQA/YMBAAwAAO9EpwLoP9GpAAZI9ODEcJ/udUW3lgdUAP2DgQqgUTDsEv3s8cV25b3FDwAAADwGKgRID4nOLUD/ic4tQGGiWh6tLI0Nif7+/U82LV/RrVUGFUD/YOAWQAyGXaJ/eHa+Ld2vXr+x5lU34wEAAJj2FmCmROcWoP9E5xYg80p/2B038hXdWnpQAfQPBm4BvgSDtQ3WmiwjjgcAAKC7WwASXYciAAAAmgXAYXfcbgebLvyxBAAAwOoAWKsNlvRnO3Dpo+EWju9mDYBEbw85VABUAC4VQM/dce2lqd+MAAAAKAIAie6XnDUsAwAAYAJAeK1UqxtbaiTMaN8BAACACQAhYPiMowAAAAAAYJx8Np8JAAAAAMCcNuMcsAQAbvHy/Bv6VMKaWO1Hg1UfA3ILkBccrR4FALSeCftMAIBWU6w5KgAA9OKGd0bUhAAVgN6H01gEAHpX115XAQB6H05jEQDoXQ0A9Jpi0UkBAKAXFgDoNcWikwIAQC8sANBrikUnBQCAXlgAoNcUi04KAAC9sABArykWnRQAAHphAYBeUyw6KQAA9MICAL2mWHRSAADohQUAek2x6KQAANALCwD0mmLRSQEAoBcWAOg1xaKTAgBALywA0GuKRScFAIBeWACg1xSLTgoAAL2wAECvKRadFAAAemEBgF5TLDopAAD0wgIAvaZYdFIAAOiFBQB6TbHopAAA0AsLAPSaYtFJgV4B8NNf/Pn6BZy/3f785nd/c1InzywAyNONo1ZQoEcAfP9Hf/i/d+6Ff2vlAwBa8QTziCrQGwCWkn/3As5WIAAAomHHgFYU6AkAp5K/JQgAgFaim3lEFegFACnJ3woEAEA07BjQigI9AMCS/C1AAAC0Et3MI6pA6wDISf61IQAAomHHgFYUaBkAJcm/JgQAQCvRzTyiCrQKAEXyrwUBABANOwa0okCLAFAm/xoQAACtRDfziCrQGgA8kr82BABANOwY0IoCLQHAM/lrQgAAtBLdzCOqQCsAyEn+s8cXm7v3npj/FLd3xyAAiIYdA1pRoAUA5Cb/TsPWIAAAWolu5hFVYG0AlCZ/ixAAANGwY0ArCqwJAFXytwYBANBKdDOPqAJrAUCd/C1BAABEw44BrSiwBgC8kr8VCACAVqKbeUQVqA0A7+RvAQIAIBp2Yw14dv6PTXhF1e7nh/effvW6qt1rq771nQdvPa4KY1v41ARAreRfGwIAoIXI/nIOV/9+swkJGv7r9QkJv2s0Sf1vmFMLn6VgDY/Vwr8rfw4BmKJTeM5f+lnjESEAKPVawvHhRZC7q+uxq+x+kP3s7K8JVvOG5AR33jfpj6odrCmJH8Yokn+tSqC2pjdSRVWMCyfXwieU0Jbz+e57H7lMO1QWlnmEsV5zyTnB2sGaopUy+deAQG1NpwRAKKFTgmk35hu3fpmTH9FjrPMI8/GsRqITPhhQO1hjPvNI/hII/P6Pf7dKur11ip2n8vdTAiB4xSri5csrszNjB1grkTDni89fxcxW+33tYD3lM8/kz4VAzr6B2ppOC4Bw72+BgMcfkLDOwasSySVG7WA95a+wYOf5+dfrN5ubt39lipmwwGv91NZ0WgCEUtoCgBxnxpxv+f4wNueKEptDye9rB2tMLy8I5CR/mGvO05ramk4LgFBKxwJq//dhtV75sX5/mItHFVJyTrWDNcVfagjkJn+ur2prOi0AQuB//dsfmCBQkiyHx1orkBD8HusQJedUow8g5zGpCgK1kz/4AgCURKTx2PBILeWqshuTU9Idm5L1u9UViFGqxeG1OgFzugBLIbBG8gMARVQabFivwsoW3LCgZ4GPxxqEQapVARC+vCYE1kp+AFAakcbjrffhYdVe8QmlvCX5w9icZ8qKuZ6yUasC2M2hBgTWTH4A4B2xC/Yt6wBhrOITFoisAFB8r9pGbQB4VwJrJz8AUEdogj3rvbiiEce6AUhVeSTIYRqyBgC8INBC8gMAU/hpBlvXARStuNaVbcV3atR628paAFBDoJXkBwAeURqxaV0HKG3GydkApKg6PKRdEwAqCLSU/ADAI0oTbFrWAUrbca0bgFTrDgkymIesDYBSCLSW/ADAHIKaA6zrACUvCLFuAGpp+++h2i0AoAQC1t7+Gt2YNAJpctpkxboOUPJIzroBKLel1CRA5uBWAJALAeuTmBq+AACZwVhymHUdoKQpxxp0rbX/7uvcEgC8IVAj+bkFKMniwmMtnXm5j+WsoCldbyiUJHp4awDwgkCt5AcA0ZDzG2DtMsuZifVWo6TSyJmf9ZgWAaCGQM3kBwDWCBSOt3bn5WwMsi42lqw1CKU5aqpVAKggUDv5AUCNqD3yHdb+/JzmHMttRlgrKHnaUEPKlgFQCoE1kh8A1IjaE99hSVDr4zkrYHLXGWpK2DoAciGwVvIDgJrRu/BdlnUAa4OO9RZDufXYS9YeAGCFwJrJDwC8IjXRrjVJLY/orBuActYYEk9TNqwXAIQTTtl/sXbyAwBZaOYZspbploBJCcBdj4C1usg72/KjegJArMHmznuPygURWIjN09pHEhs/9TsBl/xlWQdIfUxn3QBkXV8QxF2WiZEAEM6lhQ8AWNkLlnWA1Pf0WTcA5TxhWEM2AKBXHQDoNTVZtK4DpDyqs24AsqwtmE5OPBgAiAW9NgcA9JqaLFrXAVIW6ywbgFpv/90XEwCYQitpMABIksl3kGUdIOVxXWwhZv/3pS8c8VXmbesAQK82ANBrarZoWQeINexYNwC13v5LBWAOJ9MBAMAkl8/gkISWq/apWVg3AKWsKfictd0qFYBds9gRACCmUIXfWx/bnXpnn2UDUOpThQoSJH0FAEiSyTQIAJjk8htsadw59djOsp6Q2lfgd9Y2ywDAplfKaACQolKFMZbW3WMLdx5PFCqcevJXAIBkqZIHAoBkqXwHWtYBjj26s/YU+J6R3joAqKOpZT3KOpZW4CM+tK4DLDXvWKqIXtp/9+UCAADAtFreSr91qtss6wBLj+8sx/fS/gsAUqMnbxy3AHm6uRxluYIfLuBZK4hW//rPKWGXgvXHH3y6Cc1RXj8pnZdLc44lVisXp9g8rSV+bDy3ACci3LIOcNgQZNkA1FP7b6wCsFQ9seA89nvLNuzdfGOJBQCu30GX65DU41oRObVcsF7F9+1aNgD11P7bAgBCvFk/AGA5v6kAIpFkuaLtl6eWDUA5VzRrAniMX0oqi16pF46lcdbzAQAAwBoz2/GWdYD9jUGW4O5l+++hgAAgK6ROHhQDlSWuUsZSAUR8aFkH2D3Ks2wA6q39l1sAfdLHNE1J5NwxACDiT8s6wO5dfpYNQL21/8aClVuAMkBQAZTp53K05X4+lPOWDUA9bf/lFsAlvN4yCgD8NTZ/g2VFPyzoWTYAmSfT0AFLwfrrj55vwmJo6U+skrDKEEusVp5QxeaZW+ofO45bgIRIsjzTt1QLsZeJJExt1SGercAxHa0nHkssAEAfwMmYUpM32Oux/Te2BvDs/NKam4vjAYB/X06IQSqAxHCNBWQOIHps/wUAiQGTOSxWqeTE2aljAECioyzrAClO6uWv/5ySh1uAxOAxDAMABrFqDrWsA6QAoMftvylPAbgFKItKAFCmn+vRKYmdOqbX9l9uAVxDjD8M4itvmXXlOkCv7b8AoCyGYkdTAcQUWvH3qnWAXrf/cgvgH3wAwF/j7G9QrQP03P7bSgUQEsXyc+udhye3u9MHQB9AEhhS7/FPjeu5/bcVACj8sG8DAACAJABY+vyPBWlPf/2n1ceAAEDTKEQfQFLa/2+QZaffUpD23v5LBWAMGONw1gCMgtUebtnrvwSAlL8mXPuccr9vzUYgKgAqgNy4LT4udPHlBmDuW22LJ+1gAADoRaUC0Gsqt5i7DjBC+++otwAv/nklj5McgwAgR7XKx+SuA4zQ/jsiAM4eX1SOoONfBwCaccXxiYR1gLCYZ3nxxwjbfw8VWfMW4NO/XG4UP61c+XfaAoAOAHBqiqHF9/BtOKFiCIt/I7T/tlIBdB4mR6cPAEb17IDntWYFMKCc21MCAKN6dsDzAgB6pwIAvaZYdFIAAOiFBQB6TbHopAAA0AsLAPSaYtFJAQCgFxYA6DXFopMCAEAvLADQa4pFJwUAgF5YAKDXFItOCgAAvbAAQK8pFp0UWArW7/3g8bZLsvQnttnK6ZRWNwsAVncBE0hVYClYY3/TL5bYqb9PnWNv4wBAbx6beL4AQO98AKDXFItOCgAAvbAAQK8pFp0UAAB6YQGAXlMsOikAAPTCAgC9plh0UmAtAIz2YpV99wAAp2DFrF4BFQDCk4PUx4Yh+Ud5rfqSRwCAPk6x6KSAZyOQ05SbNwsAmncRE9wpAAD0sQAA9Jpi0UkBAKAXFgDoNcWikwIAQC8sANBrikUnBQCAXlgAoNcUi04KAAC9sABArykWnRQAAHphAYBeUyw6KQAA9MICAL2mWHRSAADohQUAek2x6KQAANALCwD0mmLRSQEAoBcWAOg1xaKTAgBALywA0GuKRScFAIBeWACg1xSLTgoAAL2wAECvKRadFAAAemEBgF5TLDopAAD0wgIAvaZYdFIAAOiFBQB6TbHopAAA0AsLAPSaYtFJAQCgFxYA6DXFopMCAEAvLADQa4pFJwUAgF7Y9+9/skn982iKcTcURlJthIDhM44CAEDry6vXb6omf8hbAKD14VTWAIDO3S9eXl2/Gv0hANBJiiVvBWrfr6ZWmoy7nwwSKgDvLBnYPgBIT7RWoVQVAHfvPdk8O78cOCXmOjUAAACSS40lAoZ7nhBEZ48vAEOH7AAAAKAIAMfKIsDQBw0AAABwAcASGG7efrC58+6jbcXw8dMvNs8/e9VHlgw8SwAAAKoB4Fi1ABjWIwwAAACrAyAVDOE5Kx+tAgAAADQLgFPrC+FpRAje8EQCMORDAQAAgO4AABjyE/7wSAAAAIYBQCoYQr82n/8qAAAAwPAAOAWGsHPrw7Pz7a3EjGAAAABgWgAABiqAVtt7LfOq2gpsmdhoY0NzU6gYRup6pAKgAqACuN5TXQKrnrseAUCZ70viRnUsFUBhAqsccWinBzAAAABQdPXzSp6R7e7A0EI7NAAAAACggQpirXZoAAAAAEADAEhth1ZvoAIAAAAANAyAU2BQtEMDAAAAADoEQGrXY2yfBAAAAABgIABYwQAAAAAAmAAAIz9Vmf3c6AMggYH4xDEAACZ2/uxXP86/8l8GQvD+7xnx4Vg+pAKgAuAWYOIYAAATO5+r+VhX8xx/AgAAQAUwcQwAgImdn3PF4JixqgYAAACoACaOAQAwsfO5mo91Nc/xJwAAAFQAE8cAAJjY+TlXDI4Zq2oAAACACmDiGAAAEzufq/lYV/McfwIAAEAFMHEMAICJnZ9zxeCYsaoGAAAAqAAmjgEAMLHzuZqPdTXP8ScAAABUABPHAACY2Pk5VwyOGatqAAAAgApg4hgAABM7n6v5WFfzHH8CAABABTBxDACAiZ2fc8XgmLGqBgAAAKgAJo4BADCx87maj3U1z/EnAAAAVAATxwAAmNj5OVcMjhmragAAAIAKYOIYAAATO5+r+VhX8xx/AgAAQAUwcQwAgImdn3PF4JixqgYAAACoACaOgf8ActmwSN4E41oAAAAASUVORK5CYII="/>
 				<img style="width:16px;margin:0px;padding:0px;" alt="A" title="Export to all selected formats" src="data:image/png;base64,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" />
 				<br />
-				<input class="export todocx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="docx" title="Export to Word" />
-				<input class="export topptx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="pptx" title="Export to PowerPoint" />
-				<input class="export toxlsx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="xlsx" title="Export to Excel" />
-				<input class="export tovsdx" style="width:16px;margin:0px;padding:0px;" type="checkbox" name="vsdx" title="Export to Visio" />
+				<input class="export todocx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="docx" title="Export to Word" />
+				<input class="export topptx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="pptx" title="Export to PowerPoint" />
+				<input class="export toxlsx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="xlsx" title="Export to Excel" />
+				<input class="export tovsdx" style="width:16px;margin:0px;padding:0px;" type="checkbox" tabindex="-1" name="vsdx" title="Export to Visio" />
 			</th>
 		</tr>
         </thead>
