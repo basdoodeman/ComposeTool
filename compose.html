@@ -391,7 +391,7 @@ $( document ).ready(function() {
 		                            });
 
 									for (var i=0;i<e.length;i++) {
-										// leaf for Error
+                                                // leaf for Error
 		                                addBranch({
 		                                    parentId: branches['Errors'].id,
 		                                    table: "#example-advanced",
@@ -400,21 +400,24 @@ $( document ).ready(function() {
 		                                    },
 		                                    kind: "Error",
 		                                    size: "--",
-		                                    content: e[i].properties.explanation.trim()
+		                                    content: "<span>"+e[i].properties.explanation+"</span>"
 		                                });
 
-	                                    // Handle error
-										switch (e[i].message) {
-											case "Unopened tag":
-												// remove unopened tag:
+                                                // Handle error
+                                                switch (e[i].message) {
+                                                        case "Unopened tag":
+                                                                // remove unopened tag:
 
-												//The tag beginning with "> Detai" is unopened
-												doc.zip.file('word/document.xml', doc.zip.file('word/document.xml').asText().replace("/"+doc.options.delimiters.start+"/g",""));
-												
-												break;
-											default:
-										}
-									}
+                                                                //The tag beginning with "> Detai" is unopened
+                                                                doc.zip.file('word/document.xml', doc.zip.file('word/document.xml').asText().replace("/"+doc.options.delimiters.start+"/g",""));
+
+                                                                
+doc.render();
+                                                                
+                                                                break;
+                                                        default:
+                                                }
+                                        }
 	                                $("#example-advanced").treetable("expandNode", branches['Errors'].id);
 									
                                     throw new Error("Error");
